@@ -1,41 +1,21 @@
-package core
+package postgres
 
 import (
-	"context"
-	"encoding/json"
-	"my-project/internal/adapter/postgres"
-	"my-project/internal/adapter/redis"
-	"my-project/types"
-	"github.com/sirupsen/logrus"
+	"database/sql"
+	_ "github.com/lib/pq"
+	"time"
 )
 
-// Logic
-type Logic struct {
-	DB    *postgres.DB
-	Redis *redis.Client
-	Log   *logrus.Logger
+type DB struct {
+	Conn *sql.DB
 }
 
-func NewLogic(db *postgres.DB, r *redis.Client, l *logrus.Logger) *Logic {
-	return &Logic{DB: db, Redis: r, Log: l}
-}
-
-// ProcessMessage 
-func (l *Logic) ProcessMessage(ctx context.Context, rawMsg []byte) error {
-	var msg types.Message
-	if err := json.Unmarshal(rawMsg, &msg); err != nil {
-		return err
-	}
-
-	// 1. Logic: Save to DB (Persistent)
-	// Manual SQL Insert
-	_, err := l.DB.Conn.ExecContext(ctx, "INSERT INTO messages ...", msg.ID, msg.Payload)
+func New(dsn string) (*DB, error) {
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		l.Log.Error("DB Save Failed", err)
-		return err
+		return nil, err
 	}
-
-	// 2. Logic: Publish to PubSub (Realtime delivery)
-	// Gateway will listen to this channel
-	return l.Redis.Publish(ctx, "chat.broadcast", rawMsg)
+	db.SetMaxOpenConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+	return &DB{Conn: db}, nil
 }
