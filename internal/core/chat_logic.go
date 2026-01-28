@@ -3,19 +3,20 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"my-project/internal/adapter/redis"
+	"my-project/internal/port"
 	"my-project/internal/repository"
 	"my-project/types"
+	"errors"
 	"github.com/google/uuid"
 )
 
 type ChatLogic struct {
 	Repo   repository.MessageRepository
-	Queue  *redis.Client
+	Broker port.MessageBroker
 }
 
-func NewChatLogic(repo repository.MessageRepository, q *redis.Client) *ChatLogic {
-	return &ChatLogic{Repo: repo, Queue: q}
+func NewChatLogic(repo repository.MessageRepository, broker port.MessageBroker) *ChatLogic {
+	return &ChatLogic{Repo: repo, Broker: broker}
 }
 
 func (l *ChatLogic) ProcessIncomingMessage(ctx context.Context, rawMsg []byte) error {
@@ -29,14 +30,18 @@ func (l *ChatLogic) ProcessIncomingMessage(ctx context.Context, rawMsg []byte) e
 		return err
 	}
 
+	if msg.Content == "" {
+        return errors.New("message content cannot be empty")
+    }
+
 	// 
 	// key: history:USER_ID
 	senderKey := "history:" + msg.SenderID.String()
 	receiverKey := "history:" + msg.ReceiverID.String()
-	_ = l.Queue.CacheMessage(ctx, senderKey, rawMsg)
-	_ = l.Queue.CacheMessage(ctx, receiverKey, rawMsg)
+	_ = l.Broker.CacheMessage(ctx, senderKey, rawMsg)
+	_ = l.Broker.CacheMessage(ctx, receiverKey, rawMsg)
 
-	return l.Queue.Publish(ctx, "chat.broadcast", rawMsg)
+	return l.Broker.Publish(ctx, "chat.broadcast", rawMsg)
 }
 
 // GetHistory:
@@ -44,7 +49,7 @@ func (l *ChatLogic) GetHistory(userID uuid.UUID) ([]types.Message, error) {
 	ctx := context.Background()
 	key := "history:" + userID.String()
 
-	rawMsgs, err := l.Queue.GetRecentMessages(ctx, key)
+	rawMsgs, err := l.Broker.GetRecentMessages(ctx, key)
 	if err != nil {
 		return nil, err
 	}
