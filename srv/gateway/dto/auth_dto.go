@@ -24,3 +24,8 @@ type UserRes struct {
 	Username  string `json:"username"`
 	PublicKey string `json:"public_key"`
 }
+
+// RecoverReq
+type RecoverReq struct {
+	Mnemonic string `json:"mnemonic" binding:"required"`
+}

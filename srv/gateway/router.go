@@ -14,6 +14,7 @@ func SetupRouter(secret string, authH *handler.AuthHandler, wsH *handler.WSHandl
 	{
 		v1.POST("/auth/register", authH.Register)
 		v1.POST("/auth/login", authH.Login)
+		v1.POST("/auth/recover", authH.RecoverAccount)
 	}
 
 	protected := v1.Group("/")

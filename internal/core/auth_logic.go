@@ -73,3 +73,25 @@ func (a *AuthLogic) Login(username, password string) (string, error) {
 
 	return tokenString, nil
 }
+
+func (a *AuthLogic) RecoverAccount(mnemonic string) (string, error) {
+	mnemonicHash := crypto.HashString(mnemonic)
+	var user types.User
+
+	row := a.DB.Conn.QueryRow("SELECT id FROM users WHERE mnemonic_hash = $1", mnemonicHash)
+	err := row.Scan(&user.ID)
+	if err != nil {
+		return "", errors.New("invalid mnemonic")
+	}
+
+	return a.generateToken(user.ID)
+}
+
+func (a *AuthLogic) generateToken(userID uuid.UUID) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": userID.String(),
+		"exp": time.Now().Add(time.Hour * 72).Unix(),
+	})
+
+	return token.SignedString([]byte(a.JWTSecret))
+}

@@ -11,6 +11,7 @@ import (
 	"my-project/internal/adapter/redis"
 	"my-project/pkg/consts"
 	"my-project/types"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 const (
@@ -29,10 +30,9 @@ type Client struct {
 	Log    *logrus.Logger
 }
 
-// مدل ورودی: چیزی که فرانت (Postman) می‌فرستد
 type IncomingReq struct {
-	ReceiverID string `json:"to"`      // ID گیرنده
-	Content    string `json:"content"` // متن پیام
+	ReceiverID string `json:"to"`
+	Content    string `json:"content"`
 }
 
 func (c *Client) ReadPump() {
@@ -54,14 +54,14 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		// 1. خواندن JSON ورودی
 		var req IncomingReq
 		if err := json.Unmarshal(message, &req); err != nil {
 			c.Log.Error("Invalid JSON format from client")
 			continue
 		}
+		p := bluemonday.UGCPolicy()
+		req.Content = p.Sanitize(req.Content)
 
-		// 2. اعتبارسنجی UUIDها
 		senderUUID, err := uuid.Parse(c.UserID)
 		if err != nil {
 			c.Log.Error("Invalid Sender UUID")
@@ -74,16 +74,14 @@ func (c *Client) ReadPump() {
 			continue
 		}
 
-		// 3. ساخت پیام استاندارد
 		domainMsg := types.Message{
 			ID:         uuid.New(),
 			SenderID:   senderUUID,
-			ReceiverID: receiverUUID, // اینجا گیرنده درست ست می‌شود
+			ReceiverID: receiverUUID,
 			Content:    req.Content,
 			CreatedAt:  time.Now().Unix(),
 		}
 
-		// 4. تبدیل به JSON و ارسال به صف
 		bytes, _ := json.Marshal(domainMsg)
 
 		err = c.Redis.PushQueue(context.Background(), consts.QueueChatInbound, bytes)

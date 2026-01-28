@@ -8,40 +8,32 @@ import (
 	"my-project/internal/adapter/postgres"
 	"my-project/internal/adapter/redis"
 	"my-project/internal/core"
-	"my-project/srv/gateway"
-	"my-project/srv/gateway/handler"
-	"my-project/srv/gateway/worker"
-	"my-project/srv/gateway/ws"
+	"my-project/pkg/consts"
 )
 
 func main() {
-	// 1. Infra
 	db, err := postgres.New(os.Getenv("DB_DSN"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	rdb := redis.New(os.Getenv("REDIS_ADDR"))
+	chatLogic := core.NewChatLogic(db, rdb)
+	log.Println("Core Worker Started (Listening to Queue)...")
 
-	// 2. Logic
-	// FIX: Pass JWT Secret to NewAuthLogic
-	jwtSecret := os.Getenv("JWT_SECRET")
-	authLogic := core.NewAuthLogic(db, jwtSecret)
+	ctx := context.Background()
+	for {
+		result, err := rdb.RDB.BLPop(ctx, 0, consts.QueueChatInbound).Result()
+		if err != nil {
+			log.Println("Queue Error:", err)
+			continue
+		}
 
-	// 3. WebSocket Hub
-	hub := ws.NewHub()
-	go hub.Run() 
-
-	// 4. Redis Subscriber
-	sub := worker.NewSubscriber(rdb.RDB, hub) 
-	go sub.Start(context.Background())
-
-	// 5. Handlers
-	authHandler := &handler.AuthHandler{Logic: authLogic}
-	wsHandler := &handler.WSHandler{Hub: hub, Redis: rdb} 
-
-	// 6. Router 
-	r := gateway.SetupRouter(jwtSecret, authHandler, wsHandler)
-	
-	log.Println("Gateway running on :8080")
-	r.Run(":8080")
+		payload := result[1]
+		
+		log.Printf("Processing message: %s", payload)
+		err = chatLogic.ProcessIncomingMessage(ctx, []byte(payload))
+		if err != nil {
+			log.Printf("Failed to process message: %v", err)
+		}
+	}
 }

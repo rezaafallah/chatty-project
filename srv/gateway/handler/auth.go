@@ -52,3 +52,22 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		ExpiresIn: 72 * 3600,
 	})
 }
+
+func (h *AuthHandler) RecoverAccount(c *gin.Context) {
+	var req dto.RecoverReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		api.Error(c, 400, "Invalid mnemonic format")
+		return
+	}
+
+	token, err := h.Logic.RecoverAccount(req.Mnemonic)
+	if err != nil {
+		api.Error(c, 401, "Recovery failed: invalid mnemonic")
+		return
+	}
+
+	api.Success(c, dto.LoginRes{
+		Token:     token,
+		ExpiresIn: 72 * 3600,
+	})
+}

@@ -1,11 +1,15 @@
 package crypto
 
 import (
+	"bytes"
+	"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/hex"
+
 	"github.com/tyler-smith/go-bip39"
 )
 
+// GenerateMnemonic
 func GenerateMnemonic() (string, error) {
 	entropy, err := bip39.NewEntropy(256)
 	if err != nil {
@@ -19,7 +23,15 @@ func HashString(input string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-// GenerateKeyPair is a mock. Use real Curve25519 in prod.
-func GenerateKeyPair(mnemonic string) (string, string) {
-	return "mock_pub_" + HashString(mnemonic)[:10], "mock_priv_key"
+// GenerateKeys(Real Implementation)
+func GenerateKeyPair(mnemonic string) (publicKey string, privateKey string) {
+	seed := bip39.NewSeed(mnemonic, "")
+	reader := bytes.NewReader(seed)
+	
+	pub, priv, err := ed25519.GenerateKey(reader)
+	if err != nil {
+		return "", ""
+	}
+
+	return hex.EncodeToString(pub), hex.EncodeToString(priv)
 }
