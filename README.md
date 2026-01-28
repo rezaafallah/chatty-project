@@ -59,6 +59,57 @@ chatty-project/
 ├── go.mod                          # Go module definition
 └── makefile                        # Shortcuts for running/building
 ```
+
+## 🏗 Architecture & Data Flow
+
+The following diagram illustrates how the **Gateway** handles connections and how the **Core** processes business logic asynchronously.
+
+```mermaid
+graph TD
+    %% Styling
+    classDef client fill:#f9f9f9,stroke:#333,stroke-width:2px;
+    classDef gateway fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
+    classDef core fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef infra fill:#fff3e0,stroke:#ef6c00,stroke-width:2px;
+
+    User((User / Client)):::client
+
+    subgraph "Gateway Service"
+        WSHandler[WS Handler]:::gateway
+        WSHub[WebSocket Hub]:::gateway
+        Subscriber[Redis Subscriber]:::gateway
+    end
+
+    subgraph "Infrastructure (Broker & Storage)"
+        RedisQueue[("Redis Queue (chat.inbound)")]:::infra
+        RedisPubSub(("Redis Pub/Sub (chat.broadcast)")):::infra
+        Postgres[("PostgreSQL DB")]:::infra
+        RedisCache[("Redis Cache")]:::infra
+    end
+
+    subgraph "Core Service (Worker)"
+        Worker[Queue Consumer]:::core
+        ChatLogic[Chat Logic]:::core
+        MsgRepo[Message Repository]:::core
+    end
+
+    %% Flow
+    User -->|1. Connect WebSocket| WSHandler
+    WSHandler -->|2. Register Client| WSHub
+    User -->|3. Send Message| WSHandler
+    WSHandler -->|4. Push Payload| RedisQueue
+    
+    RedisQueue -->|5. Pop Message| Worker
+    Worker -->|6. Process| ChatLogic
+    ChatLogic -->|7. Persist| Postgres
+    ChatLogic -->|8. Cache| RedisCache
+    ChatLogic -->|9. Publish Event| RedisPubSub
+    
+    RedisPubSub -->|10. Listen| Subscriber
+    Subscriber -->|11. Forward| WSHub
+    WSHub -->|12. Broadcast| User
+```
+
 ## 💿 Installation & Setup
 ### Docker (Recommended) 🐳
 
@@ -76,7 +127,15 @@ This method automatically sets up all dependencies (PostgreSQL, Redis, Gateway, 
     cd chatty-project
     ```
 
-2.  **Build and Start Services:**
+2.  **Setup Docker Drivers (Run once):**
+    This project uses Loki for centralized logging. You must install the Docker plugin first.
+    ```bash
+    make setup-loki
+    # OR manually:
+    docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
+    ```
+    
+4.  **Build and Start Services:**
     You can use the `make` command or docker-compose directly.
     ```bash
     make up
@@ -84,14 +143,14 @@ This method automatically sets up all dependencies (PostgreSQL, Redis, Gateway, 
     docker-compose up --build -d
     ```
 
-3.  **Verify Installation:**
+5.  **Verify Installation:**
     Check if containers are up and running:
     ```bash
     docker ps
     ```
     ✅ **Expected Output:** You should see 4 containers running: `chatty_gateway`, `chatty_core`, `chatty_db`, and `chatty_redis`.
 
-4.  **Stop Services:**
+6.  **Stop Services:**
     ```bash
     make down
     ```
