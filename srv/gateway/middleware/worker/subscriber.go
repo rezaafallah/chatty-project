@@ -2,9 +2,10 @@ package worker
 
 import (
 	"context"
-	"encoding/json" // اضافه شد
+	"encoding/json"
 	"my-project/pkg/consts"
 	"my-project/pkg/logger"
+	"my-project/types" // Import types
 	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
@@ -27,12 +28,6 @@ func NewSubscriber(rdb *redis.Client, hub WebSocketHub) *Subscriber {
 	}
 }
 
-// ساختار پیام برای Decode کردن JSON
-type BroadcastMsg struct {
-	ReceiverID string `json:"receiver_id"`
-	Payload    string `json:"payload"`
-}
-
 func (s *Subscriber) Start(ctx context.Context) {
 	pubsub := s.RDB.Subscribe(ctx, consts.TopicChatBroadcast)
 	defer pubsub.Close()
@@ -41,20 +36,18 @@ func (s *Subscriber) Start(ctx context.Context) {
 	s.Log.Info("Gateway Subscriber Started...")
 
 	for msg := range ch {
-		// 1. آنمارشال کردن پیام برای پیدا کردن گیرنده
-		var bMsg BroadcastMsg
-		// فرض: Core پیام را کامل (شامل ID گیرنده) می‌فرستد
-		// اگر فرمت دیتای Core چیز دیگری است، اینجا باید هندل شود
-		// فعلا فرض می‌کنیم Core کل آبجکت Message را JSON کرده فرستاده
-		if err := json.Unmarshal([]byte(msg.Payload), &bMsg); err != nil {
+		// 1. Unmarshal into Domain Message to check Receiver
+		var domainMsg types.Message
+		
+		if err := json.Unmarshal([]byte(msg.Payload), &domainMsg); err != nil {
 			s.Log.Error("Failed to unmarshal broadcast msg", err)
 			continue
 		}
 
-		// 2. ارسال به کاربر خاص از طریق Hub
-		// نکته: اینجا Payload اصلی را دوباره به کلاینت می‌فرستیم
-		s.Hub.BroadcastToUser(bMsg.ReceiverID, []byte(msg.Payload))
+		// 2. Send to specific user via Hub
+		// We send the full payload back to the client so they see sender_id etc.
+		s.Hub.BroadcastToUser(domainMsg.ReceiverID.String(), []byte(msg.Payload))
 		
-		s.Log.Debugf("Relayed message to user %s", bMsg.ReceiverID)
+		s.Log.Debugf("Relayed message to user %s", domainMsg.ReceiverID)
 	}
 }
