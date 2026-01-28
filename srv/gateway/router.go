@@ -7,6 +7,7 @@ import (
 )
 
 func SetupRouter(secret string, authH *handler.AuthHandler) *gin.Engine {
+	protected.GET("/ws", wsH.HandleConnection)
 	r := gin.New()
 	r.Use(gin.Recovery())
 
