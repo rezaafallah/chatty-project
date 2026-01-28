@@ -5,14 +5,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"my-project/srv/gateway/ws"
-	"my-project/internal/adapter/redis"
+	"my-project/internal/port"
 	"my-project/internal/service"
 	"my-project/pkg/logger"
 )
 
 type WSHandler struct {
 	Hub       *ws.Hub
-	Redis     *redis.Client
+	Broker port.MessageBroker
 	Sanitizer *service.Sanitizer
 }
 
@@ -37,7 +37,7 @@ func (h *WSHandler) HandleConnection(c *gin.Context) {
 
 	client := &ws.Client{
 		Hub:       h.Hub,
-		Redis:     h.Redis,
+		Broker:     h.Broker,
 		Conn:      conn,
 		Send:      make(chan []byte, 256),
 		UserID:    userID,

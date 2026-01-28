@@ -40,7 +40,6 @@ func main() {
 	// 4. WebSocket Hub
 	hub := ws.NewHub()
 	go hub.Run() 
-
 	// 5. Redis Subscriber
 	sub := worker.NewSubscriber(rdb.RDB, hub) 
 	go sub.Start(context.Background())
@@ -48,7 +47,8 @@ func main() {
 	// 6. Handlers
 	authHandler := &handler.AuthHandler{Logic: authLogic}
 	// Sanitizer
-	wsHandler := &handler.WSHandler{Hub: hub, Redis: rdb, Sanitizer: sanitizer}
+	wsHandler := &handler.WSHandler{Hub: hub, Broker: rdb, Sanitizer: sanitizer}
+	
 	chatHandler := &handler.ChatHandler{Logic: chatLogic}
 
 	// 7. Router 

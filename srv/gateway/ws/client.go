@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
-	"my-project/internal/adapter/redis"
+	"my-project/internal/port"
 	"my-project/internal/service"
 	"my-project/pkg/consts"
 	"my-project/types"
@@ -23,7 +23,7 @@ const (
 
 type Client struct {
 	Hub    *Hub
-	Redis  *redis.Client
+	Broker port.MessageBroker
 	Conn   *websocket.Conn
 	Send   chan []byte
 	UserID string
@@ -75,7 +75,7 @@ func (c *Client) ReadPump() {
 		}
 
 		domainMsg := types.Message{
-			ID:         uuid.New(),
+			// ID:         uuid.New(), core
 			SenderID:   senderUUID,
 			ReceiverID: receiverUUID,
 			Content:    req.Content,
@@ -84,9 +84,9 @@ func (c *Client) ReadPump() {
 
 		bytes, _ := json.Marshal(domainMsg)
 
-		err = c.Redis.PushQueue(context.Background(), consts.QueueChatInbound, bytes)
+		err = c.Broker.PushQueue(context.Background(), consts.QueueChatInbound, bytes)
 		if err != nil {
-			c.Log.Error("Failed to push to redis queue", err)
+			c.Log.Error("Failed to push to Broker queue", err)
 		}
 	}
 }
