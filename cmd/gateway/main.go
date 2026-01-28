@@ -23,9 +23,9 @@ func main() {
 	rdb := redis.New(os.Getenv("REDIS_ADDR"))
 
 	// 2. Logic
-	// FIX: Pass JWT Secret to NewAuthLogic
 	jwtSecret := os.Getenv("JWT_SECRET")
 	authLogic := core.NewAuthLogic(db, jwtSecret)
+	chatLogic := core.NewChatLogic(db, rdb)
 
 	// 3. WebSocket Hub
 	hub := ws.NewHub()
@@ -37,10 +37,11 @@ func main() {
 
 	// 5. Handlers
 	authHandler := &handler.AuthHandler{Logic: authLogic}
-	wsHandler := &handler.WSHandler{Hub: hub, Redis: rdb} 
+	wsHandler := &handler.WSHandler{Hub: hub, Redis: rdb}
+	chatHandler := &handler.ChatHandler{Logic: chatLogic}
 
 	// 6. Router 
-	r := gateway.SetupRouter(jwtSecret, authHandler, wsHandler)
+	r := gateway.SetupRouter(jwtSecret, authHandler, wsHandler, chatHandler)
 	
 	log.Println("Gateway running on :8080")
 	r.Run(":8080")

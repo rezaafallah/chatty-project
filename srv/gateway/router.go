@@ -6,8 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(secret string, authH *handler.AuthHandler, wsH *handler.WSHandler) *gin.Engine {
-	r := gin.New()
+func SetupRouter(secret string, authH *handler.AuthHandler, wsH *handler.WSHandler, chatH *handler.ChatHandler) *gin.Engine {	r := gin.New()
 	r.Use(gin.Recovery())
 
 	v1 := r.Group("/api/v1")
@@ -22,6 +21,7 @@ func SetupRouter(secret string, authH *handler.AuthHandler, wsH *handler.WSHandl
 	{
 		
 		protected.GET("/ws", wsH.HandleConnection)
+		protected.GET("/chat/history", chatH.GetHistory)
 	}
 	return r
 }
