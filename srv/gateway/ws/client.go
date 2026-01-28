@@ -9,9 +9,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"my-project/internal/adapter/redis"
+	"my-project/internal/service"
 	"my-project/pkg/consts"
 	"my-project/types"
-	"github.com/microcosm-cc/bluemonday"
 )
 
 const (
@@ -28,6 +28,7 @@ type Client struct {
 	Send   chan []byte
 	UserID string
 	Log    *logrus.Logger
+	Sanitizer *service.Sanitizer
 }
 
 type IncomingReq struct {
@@ -59,8 +60,7 @@ func (c *Client) ReadPump() {
 			c.Log.Error("Invalid JSON format from client")
 			continue
 		}
-		p := bluemonday.UGCPolicy()
-		req.Content = p.Sanitize(req.Content)
+			req.Content = c.Sanitizer.Clean(req.Content)
 
 		senderUUID, err := uuid.Parse(c.UserID)
 		if err != nil {

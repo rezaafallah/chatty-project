@@ -26,7 +26,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Password: req.Password,
 	}
 
-	mnemonic, err := h.Logic.Register(domainReq)
+	mnemonic, err := h.Logic.Register(c.Request.Context(), domainReq)
 	if err != nil {
 		api.Error(c, 500, "Registration failed")
 		return
@@ -41,7 +41,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, err := h.Logic.Login(req.Username, req.Password)
+	token, err := h.Logic.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		api.Error(c, 401, "Login failed: "+err.Error())
 		return
@@ -60,7 +60,7 @@ func (h *AuthHandler) RecoverAccount(c *gin.Context) {
 		return
 	}
 
-	token, err := h.Logic.RecoverAccount(req.Mnemonic)
+	token, err := h.Logic.RecoverAccount(c.Request.Context(), req.Mnemonic)
 	if err != nil {
 		api.Error(c, 401, "Recovery failed: invalid mnemonic")
 		return

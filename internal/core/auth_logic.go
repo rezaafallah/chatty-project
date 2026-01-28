@@ -1,97 +1,69 @@
 package core
 
 import (
-	"database/sql"
+	"context"
 	"errors"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"my-project/internal/adapter/postgres"
-	"my-project/internal/crypto"
-	"my-project/types"
 	"github.com/google/uuid"
+	"my-project/internal/crypto"
+	"my-project/internal/repository"
+	"my-project/pkg/auth"
+	"my-project/types"
 )
 
 type AuthLogic struct {
-	DB        *postgres.DB
-	JWTSecret string 
+	Repo      repository.UserRepository
+	TokenMgr  auth.TokenManager
 }
 
-func NewAuthLogic(db *postgres.DB, secret string) *AuthLogic {
+// (Dependency Injection)
+func NewAuthLogic(repo repository.UserRepository, tokenMgr auth.TokenManager) *AuthLogic {
 	return &AuthLogic{
-		DB:        db,
-		JWTSecret: secret,
+		Repo:     repo,
+		TokenMgr: tokenMgr,
 	}
 }
 
-//Register
-func (a *AuthLogic) Register(req types.RegisterReq) (string, error) {
-    mnemonic, _ := crypto.GenerateMnemonic()
-    pubKey, _ := crypto.GenerateKeyPair(mnemonic)
-    
-    user := types.User{
-        ID:           uuid.New(),
-        Username:     req.Username,
-        PasswordHash: crypto.HashString(req.Password),
-        MnemonicHash: crypto.HashString(mnemonic),
-        PublicKey:    pubKey,
-        CreatedAt:    time.Now().Unix(),
-    }
+func (a *AuthLogic) Register(ctx context.Context, req types.RegisterReq) (string, error) {
+	mnemonic, _ := crypto.GenerateMnemonic()
+	pubKey, _ := crypto.GenerateKeyPair(mnemonic)
 
-    _, err := a.DB.Conn.Exec(
-        "INSERT INTO users (id, username, password_hash, mnemonic_hash, public_key, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
-        user.ID, user.Username, user.PasswordHash, user.MnemonicHash, user.PublicKey, user.CreatedAt,
-    )
-    return mnemonic, err
+	user := types.User{
+		ID:           uuid.New(),
+		Username:     req.Username,
+		PasswordHash: crypto.HashString(req.Password),
+		MnemonicHash: crypto.HashString(mnemonic),
+		PublicKey:    pubKey,
+		CreatedAt:    time.Now().Unix(),
+	}
+
+	err := a.Repo.Create(ctx, user)
+	return mnemonic, err
 }
 
-//Login
-func (a *AuthLogic) Login(username, password string) (string, error) {
-	var user types.User
-	row := a.DB.Conn.QueryRow("SELECT id, password_hash FROM users WHERE username = $1", username)
-	err := row.Scan(&user.ID, &user.PasswordHash)
+func (a *AuthLogic) Login(ctx context.Context, username, password string) (string, error) {
+	user, err := a.Repo.GetByUsername(ctx, username)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", errors.New("invalid credentials")
-		}
 		return "", err
 	}
-
-	if crypto.HashString(password) != user.PasswordHash {
+	if user == nil || crypto.HashString(password) != user.PasswordHash {
 		return "", errors.New("invalid credentials")
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID.String(),
-		"exp": time.Now().Add(time.Hour * 72).Unix(),
-	})
+	return a.TokenMgr.Generate(user.ID)
+}
 
-	tokenString, err := token.SignedString([]byte(a.JWTSecret))
+func (a *AuthLogic) RecoverAccount(ctx context.Context, mnemonic string) (string, error) {
+	mnemonicHash := crypto.HashString(mnemonic)
+	
+	user, err := a.Repo.GetByMnemonicHash(ctx, mnemonicHash)
 	if err != nil {
 		return "", err
 	}
-
-	return tokenString, nil
-}
-
-func (a *AuthLogic) RecoverAccount(mnemonic string) (string, error) {
-	mnemonicHash := crypto.HashString(mnemonic)
-	var user types.User
-
-	row := a.DB.Conn.QueryRow("SELECT id FROM users WHERE mnemonic_hash = $1", mnemonicHash)
-	err := row.Scan(&user.ID)
-	if err != nil {
+	if user == nil {
 		return "", errors.New("invalid mnemonic")
 	}
 
-	return a.generateToken(user.ID)
-}
-
-func (a *AuthLogic) generateToken(userID uuid.UUID) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": userID.String(),
-		"exp": time.Now().Add(time.Hour * 72).Unix(),
-	})
-
-	return token.SignedString([]byte(a.JWTSecret))
+	return a.TokenMgr.Generate(user.ID)
 }

@@ -4,10 +4,14 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"my-project/internal/adapter/postgres"
 	"my-project/internal/adapter/redis"
 	"my-project/internal/core"
+	"my-project/internal/repository"
+	"my-project/internal/service"    
+	"my-project/pkg/auth"            
 	"my-project/srv/gateway"
 	"my-project/srv/gateway/handler"
 	"my-project/srv/gateway/worker"
@@ -22,25 +26,31 @@ func main() {
 	}
 	rdb := redis.New(os.Getenv("REDIS_ADDR"))
 
-	// 2. Logic
+	// 2. Dependencies (SRP Refactoring)
+	userRepo := repository.NewUserRepository(db.Conn)
 	jwtSecret := os.Getenv("JWT_SECRET")
-	authLogic := core.NewAuthLogic(db, jwtSecret)
+	tokenMgr := auth.NewJWTManager(jwtSecret, 72*time.Hour)
+	sanitizer := service.NewSanitizer()
+
+	// 3. Logic
+	authLogic := core.NewAuthLogic(userRepo, tokenMgr)
 	chatLogic := core.NewChatLogic(db, rdb)
 
-	// 3. WebSocket Hub
+	// 4. WebSocket Hub
 	hub := ws.NewHub()
 	go hub.Run() 
 
-	// 4. Redis Subscriber
+	// 5. Redis Subscriber
 	sub := worker.NewSubscriber(rdb.RDB, hub) 
 	go sub.Start(context.Background())
 
-	// 5. Handlers
+	// 6. Handlers
 	authHandler := &handler.AuthHandler{Logic: authLogic}
-	wsHandler := &handler.WSHandler{Hub: hub, Redis: rdb}
+	// Sanitizer
+	wsHandler := &handler.WSHandler{Hub: hub, Redis: rdb, Sanitizer: sanitizer}
 	chatHandler := &handler.ChatHandler{Logic: chatLogic}
 
-	// 6. Router 
+	// 7. Router 
 	r := gateway.SetupRouter(jwtSecret, authHandler, wsHandler, chatHandler)
 	
 	log.Println("Gateway running on :8080")
