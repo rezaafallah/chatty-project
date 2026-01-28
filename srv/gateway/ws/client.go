@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 	"my-project/pkg/consts"
 	"my-project/pkg/logger"
 	"my-project/internal/adapter/redis"
+	"my-project/types"
 )
 
 const (
@@ -26,6 +28,12 @@ type Client struct {
 	Send     chan []byte
 	UserID   string
 	Log      *logrus.Logger
+}
+
+// IncomingReq represents what the frontend sends
+type IncomingReq struct {
+	ReceiverID string `json:"to"`      // Changed to 'to' for simplicity or match frontend
+	Content    string `json:"content"`
 }
 
 func (c *Client) ReadPump() {
@@ -47,18 +55,24 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		// ساخت پیام برای صف Core
-		inboundMsg := map[string]interface{}{
-			"sender_id":   c.UserID,
-			"receiver_id": "", // در MVP کلاینت باید بگوید به کی می‌فرستد، اینجا باید Parse شود
-			"payload":     string(message), 
-			"timestamp":   time.Now().Unix(),
+		// 1. Parse incoming JSON from frontend
+		var req IncomingReq
+		if err := json.Unmarshal(message, &req); err != nil {
+			c.Log.Error("Invalid JSON format from client")
+			continue
 		}
-		
-		// نکته: در یک سناریوی واقعی، کلاینت یک JSON می‌فرستد که فیلد `to` دارد.
-		// اینجا فرض می‌کنیم کلاینت JSON معتبر می‌فرستد.
-		
-		bytes, _ := json.Marshal(inboundMsg)
+
+		// 2. Construct the Domain Message (Standardized)
+		domainMsg := types.Message{
+			ID:         uuid.New(),
+			SenderID:   uuid.MustParse(c.UserID),
+			ReceiverID: uuid.MustParse(req.ReceiverID),
+			Content:    req.Content,
+			CreatedAt:  time.Now().Unix(),
+		}
+
+		// 3. Marshal back to JSON to send to Redis Queue
+		bytes, _ := json.Marshal(domainMsg)
 
 		err = c.Redis.PushQueue(context.Background(), consts.QueueChatInbound, bytes)
 		if err != nil {
