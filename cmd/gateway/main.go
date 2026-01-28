@@ -33,8 +33,9 @@ func main() {
 	sanitizer := service.NewSanitizer()
 
 	// 3. Logic
+	msgRepo := repository.NewMessageRepository(db.Conn)
 	authLogic := core.NewAuthLogic(userRepo, tokenMgr)
-	chatLogic := core.NewChatLogic(db, rdb)
+	chatLogic := core.NewChatLogic(msgRepo, rdb)
 
 	// 4. WebSocket Hub
 	hub := ws.NewHub()

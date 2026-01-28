@@ -8,6 +8,7 @@ import (
 	"my-project/internal/adapter/postgres"
 	"my-project/internal/adapter/redis"
 	"my-project/internal/core"
+	"my-project/internal/repository"
 	"my-project/pkg/consts"
 )
 
@@ -17,7 +18,11 @@ func main() {
 		log.Fatal(err)
 	}
 	rdb := redis.New(os.Getenv("REDIS_ADDR"))
-	chatLogic := core.NewChatLogic(db, rdb)
+
+	//logic
+	msgRepo := repository.NewMessageRepository(db.Conn)
+	chatLogic := core.NewChatLogic(msgRepo, rdb)
+	
 	log.Println("Core Worker Started (Listening to Queue)...")
 
 	ctx := context.Background()

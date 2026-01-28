@@ -3,19 +3,19 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"my-project/internal/adapter/postgres"
 	"my-project/internal/adapter/redis"
+	"my-project/internal/repository"
 	"my-project/types"
 	"github.com/google/uuid"
 )
 
 type ChatLogic struct {
-	Repo   *postgres.DB
+	Repo   repository.MessageRepository
 	Queue  *redis.Client
 }
 
-func NewChatLogic(r *postgres.DB, q *redis.Client) *ChatLogic {
-	return &ChatLogic{Repo: r, Queue: q}
+func NewChatLogic(repo repository.MessageRepository, q *redis.Client) *ChatLogic {
+	return &ChatLogic{Repo: repo, Queue: q}
 }
 
 func (l *ChatLogic) ProcessIncomingMessage(ctx context.Context, rawMsg []byte) error {
@@ -24,10 +24,7 @@ func (l *ChatLogic) ProcessIncomingMessage(ctx context.Context, rawMsg []byte) e
 		return err
 	}
 
-	// 1.(Permanent Storage)
-	_, err := l.Repo.Conn.ExecContext(ctx, 
-		"INSERT INTO messages (id, sender_id, receiver_id, content, created_at) VALUES ($1, $2, $3, $4, $5)",
-		msg.ID, msg.SenderID, msg.ReceiverID, msg.Content, msg.CreatedAt)
+	err := l.Repo.Save(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -36,7 +33,6 @@ func (l *ChatLogic) ProcessIncomingMessage(ctx context.Context, rawMsg []byte) e
 	// key: history:USER_ID
 	senderKey := "history:" + msg.SenderID.String()
 	receiverKey := "history:" + msg.ReceiverID.String()
-
 	_ = l.Queue.CacheMessage(ctx, senderKey, rawMsg)
 	_ = l.Queue.CacheMessage(ctx, receiverKey, rawMsg)
 
