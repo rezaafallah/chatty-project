@@ -1,0 +1,91 @@
+version: "3.8"
+
+services:
+  # --- Infrastructure ---
+  db:
+    image: postgres:15-alpine
+    container_name: chatty_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: chatty_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d chatty_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: chatty_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: chatty_loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  # --- Microservices ---
+  
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: chatty_gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      loki:
+        condition: service_started
+    environment:
+      - APP_ENV=production
+      - DB_DSN=postgres://user:password@db:5432/chatty_db?sslmode=disable
+      - REDIS_ADDR=redis:6379
+      - JWT_SECRET=super_secret_jwt_key_change_me
+    #Logging Driver 
+    logging: &loki-logging
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        keep-file: "true"
+
+  core:
+    build:
+      context: .
+      dockerfile: Dockerfile.core
+    container_name: chatty_core
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - APP_ENV=production
+      - DB_DSN=postgres://user:password@db:5432/chatty_db?sslmode=disable
+      - REDIS_ADDR=redis:6379
+    logging: *loki-logging
+
+volumes:
+  postgres_data:
+  redis_data:

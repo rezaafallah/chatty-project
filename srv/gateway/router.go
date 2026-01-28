@@ -13,6 +13,7 @@ func SetupRouter(secret string, authH *handler.AuthHandler, wsH *handler.WSHandl
 	v1 := r.Group("/api/v1")
 	{
 		v1.POST("/auth/register", authH.Register)
+		v1.POST("/auth/login", authH.Login)
 	}
 
 	protected := v1.Group("/")

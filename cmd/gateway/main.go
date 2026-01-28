@@ -11,7 +11,7 @@ import (
 	"my-project/srv/gateway"
 	"my-project/srv/gateway/handler"
 	"my-project/srv/gateway/worker"
-	"my-project/srv/gateway/ws" // Import جدید
+	"my-project/srv/gateway/ws"
 )
 
 func main() {
@@ -23,24 +23,24 @@ func main() {
 	rdb := redis.New(os.Getenv("REDIS_ADDR"))
 
 	// 2. Logic
-	authLogic := core.NewAuthLogic(db)
+	// FIX: Pass JWT Secret to NewAuthLogic
+	jwtSecret := os.Getenv("JWT_SECRET")
+	authLogic := core.NewAuthLogic(db, jwtSecret)
 
-	// 3. WebSocket Hub (Start Logic)
+	// 3. WebSocket Hub
 	hub := ws.NewHub()
-	go hub.Run() // اجرای هاب در بک‌گراند
+	go hub.Run() 
 
-	// 4. Redis Subscriber (اتصال Core به Hub)
-	// حالا Hub ما متد BroadcastToUser را دارد و با اینترفیس Subscriber سازگار است
+	// 4. Redis Subscriber
 	sub := worker.NewSubscriber(rdb.RDB, hub) 
 	go sub.Start(context.Background())
 
 	// 5. Handlers
 	authHandler := &handler.AuthHandler{Logic: authLogic}
-	wsHandler := &handler.WSHandler{Hub: hub, Redis: rdb} // هندلر جدید
+	wsHandler := &handler.WSHandler{Hub: hub, Redis: rdb} 
 
-	// 6. Router (باید روت WS را اضافه کنید)
-	// نکته: باید تابع SetupRouter را آپدیت کنید که wsHandler را هم بگیرد
-	r := gateway.SetupRouter(os.Getenv("JWT_SECRET"), authHandler, wsHandler)
+	// 6. Router 
+	r := gateway.SetupRouter(jwtSecret, authHandler, wsHandler)
 	
 	log.Println("Gateway running on :8080")
 	r.Run(":8080")

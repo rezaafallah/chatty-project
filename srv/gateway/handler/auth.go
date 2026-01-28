@@ -13,15 +13,14 @@ type AuthHandler struct {
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
-	// 1. Bind to DTO (نه مدل دامین)
+	// 1. Bind to DTO
 	var req dto.RegisterReq 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		api.Error(c, 400, err.Error())
 		return
 	}
 
-	// 2. Convert DTO to Domain Model (اگه متد Logic ورودی DTO نمیگیره)
-	// یا متد Logic رو تغییر بده که DTO نگیره، بلکه پارامترهای ساده بگیره
+	// 2. Convert DTO to Domain Model 
 	domainReq := types.RegisterReq{
 		Username: req.Username,
 		Password: req.Password,
@@ -33,4 +32,23 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 	api.Success(c, gin.H{"mnemonic": mnemonic})
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+	var req dto.LoginReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		api.Error(c, 400, "Invalid request body")
+		return
+	}
+
+	token, err := h.Logic.Login(req.Username, req.Password)
+	if err != nil {
+		api.Error(c, 401, "Login failed: "+err.Error())
+		return
+	}
+
+	api.Success(c, dto.LoginRes{
+		Token:     token,
+		ExpiresIn: 72 * 3600,
+	})
 }

@@ -38,7 +38,7 @@ func (l *ChatLogic) ProcessIncomingMessage(ctx context.Context, rawMsg []byte) e
 		return err
 	}
 
-	// 2. پخش در Redis Pub/Sub
+	// 2.Redis Pub/Sub
 	return l.Queue.Publish(ctx, "chat.broadcast", rawMsg)
 }
 
