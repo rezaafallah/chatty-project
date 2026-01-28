@@ -1,4 +1,4 @@
-module chatty-project
+module my-project
 
 go 1.25.5
 

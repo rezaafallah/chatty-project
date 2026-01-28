@@ -52,7 +52,7 @@ func (h *Hub) Run() {
 	}
 }
 
-// BroadcastToUser ارسال پیام به کاربر خاص (توسط Worker صدا زده می‌شود)
+// BroadcastToUser
 func (h *Hub) BroadcastToUser(userID string, message []byte) {
 	h.Mutex.RLock()
 	defer h.Mutex.RUnlock()
@@ -61,12 +61,9 @@ func (h *Hub) BroadcastToUser(userID string, message []byte) {
 		select {
 		case client.Send <- message:
 		default:
-			// اگر بافر پر بود، کلاینت را قطع کن (Bloated connection)
 			close(client.Send)
 			delete(h.Clients, userID)
 		}
 	} else {
-		// کاربر آفلاین است. (می‌توانید اینجا لاگ کنید یا Push Notification بفرستید)
-		// h.Log.Debugf("User %s is offline, message dropped (or push notify)", userID)
 	}
 }

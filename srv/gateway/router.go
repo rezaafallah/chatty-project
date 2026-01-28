@@ -6,8 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(secret string, authH *handler.AuthHandler) *gin.Engine {
-	protected.GET("/ws", wsH.HandleConnection)
+func SetupRouter(secret string, authH *handler.AuthHandler, wsH *handler.WSHandler) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
@@ -19,7 +18,8 @@ func SetupRouter(secret string, authH *handler.AuthHandler) *gin.Engine {
 	protected := v1.Group("/")
 	protected.Use(middleware.Auth(secret))
 	{
-		// protected.GET("/users/me", ...)
+		
+		protected.GET("/ws", wsH.HandleConnection)
 	}
 	return r
 }
