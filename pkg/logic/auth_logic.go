@@ -9,6 +9,7 @@ import (
 	"my-project/internal/auth"
 	"my-project/pkg/repository"
 	"my-project/pkg/utils/crypto"
+	"my-project/pkg/validator"
 	"my-project/types"
 )
 
@@ -25,6 +26,9 @@ func NewAuthLogic(repo repository.UserRepository, tokenMgr *auth.JWTManager) *Au
 }
 
 func (a *AuthLogic) Register(ctx context.Context, req types.RegisterReq) (string, error) {
+	if err := validator.ValidateStruct(req); err != nil {
+		return "", err
+	}
 	mnemonic, _ := crypto.GenerateMnemonic()
 	pubKey, _ := crypto.GenerateKeyPair(mnemonic)
 

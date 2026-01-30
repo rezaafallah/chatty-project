@@ -17,6 +17,7 @@ import (
 	"my-project/pkg/repository"
 	"my-project/pkg/utils"
 	"my-project/internal/auth"
+	"my-project/pkg/config"
 	"my-project/srv/gateway"
 	"my-project/srv/gateway/handler"
 	"my-project/srv/gateway/worker"
@@ -28,35 +29,24 @@ type Application struct {
 	DB     *postgres.DB
 	Redis  *redis.Client
 	Router *gin.Engine
+	Config *config.Config
 }
 
 // NewApplication
-func NewApplication() (*Application, error) {
+func NewApplication(cfg *config.Config) (*Application, error) {
 	// 1. Config & Infra
-	dsn := os.Getenv("DB_DSN")
-	if dsn == "" {
-		return nil, fmt.Errorf("DB_DSN is not set")
-	}
-	db, err := postgres.New(dsn)
+	db, err := postgres.New(cfg.DB_DSN)
 	if err != nil {
 		return nil, fmt.Errorf("postgres connection failed: %w", err)
 	}
 
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		return nil, fmt.Errorf("REDIS_ADDR is not set")
-	}
-	rdb := redis.New(redisAddr)
+	rdb := redis.New(cfg.RedisAddr)
 
 	// 2. Repositories & Tools
 	userRepo := repository.NewUserRepository(db.Conn)
 	msgRepo := repository.NewMessageRepository(db.Conn)
 
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		return nil, fmt.Errorf("JWT_SECRET is not set")
-	}
-	tokenMgr := auth.NewJWTManager(jwtSecret, 72*time.Hour)
+	tokenMgr := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpiry)
 	sanitizer := service.NewSanitizer()
 
 	// 3. Logic (Services)
@@ -80,12 +70,13 @@ func NewApplication() (*Application, error) {
 	chatHandler := &handler.ChatHandler{Logic: chatLogic}
 
 	// 6. Router
-	router := gateway.SetupRouter(jwtSecret, authHandler, wsHandler, chatHandler)
+	router := gateway.SetupRouter(cfg.JWTSecret, authHandler, wsHandler, chatHandler)
 
 	return &Application{
 		DB:     db,
 		Redis:  rdb,
 		Router: router,
+		Config: cfg,
 	}, nil
 }
 
