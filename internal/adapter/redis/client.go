@@ -2,7 +2,9 @@ package redis
 
 import (
 	"context"
+	"time"
 	"github.com/redis/go-redis/v9"
+	"my-project/pkg/repository"
 )
 
 type Client struct {
@@ -36,4 +38,22 @@ func (c *Client) CacheMessage(ctx context.Context, key string, msg []byte) error
 // GetRecentMessages
 func (c *Client) GetRecentMessages(ctx context.Context, key string) ([]string, error) {
 	return c.RDB.LRange(ctx, key, 0, -1).Result()
+}
+
+// Presence Methods
+
+func (c *Client) SetUserOnline(ctx context.Context, userID string) error {
+	key := repository.OnlineKey(userID)
+	return c.RDB.Set(ctx, key, "1", 60*time.Second).Err()
+}
+
+func (c *Client) SetUserOffline(ctx context.Context, userID string) error {
+	key := repository.OnlineKey(userID)
+	return c.RDB.Del(ctx, key).Err()
+}
+
+func (c *Client) IsUserOnline(ctx context.Context, userID string) bool {
+	key := repository.OnlineKey(userID)
+	exists, _ := c.RDB.Exists(ctx, key).Result()
+	return exists > 0
 }

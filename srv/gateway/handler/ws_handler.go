@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"my-project/srv/gateway/ws"
 	"my-project/internal/port"
-	"my-project/internal/service"
+	"my-project/pkg/utils"
 	"my-project/pkg/logger"
 )
 

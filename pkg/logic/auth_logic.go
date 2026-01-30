@@ -1,4 +1,4 @@
-package core
+package logic
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"my-project/internal/crypto"
-	"my-project/internal/repository"
+	"my-project/pkg/utils/crypto"
+	"my-project/pkg/repository"
 	"my-project/pkg/auth"
 	"my-project/types"
 )

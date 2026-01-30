@@ -3,12 +3,12 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"my-project/internal/core"
+	"my-project/pkg/logic"
 	"my-project/pkg/api"
 )
 
 type ChatHandler struct {
-	Logic *core.ChatLogic
+	Logic *logic.ChatLogic
 }
 
 func (h *ChatHandler) GetHistory(c *gin.Context) {

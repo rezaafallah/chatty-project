@@ -1,15 +1,15 @@
 package handler
 
 import (
-	"my-project/internal/core"
+	"my-project/pkg/logic"
 	"my-project/pkg/api"
-	"my-project/srv/gateway/dto" // Import DTO package
-	"my-project/types"           // Import Types for conversion
+	"my-project/srv/gateway/dto"
+	"my-project/types"
 	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {
-	Logic *core.AuthLogic
+	Logic *logic.AuthLogic
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {

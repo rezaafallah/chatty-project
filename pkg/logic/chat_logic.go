@@ -1,10 +1,10 @@
-package core
+package logic
 
 import (
 	"context"
 	"encoding/json"
 	"my-project/internal/port"
-	"my-project/internal/repository"
+	"my-project/pkg/repository"
 	"my-project/types"
 	"errors"
 	"github.com/google/uuid"
@@ -44,8 +44,8 @@ import (
 	// key: history:USER_ID
 	updatedMsgBytes, _ := json.Marshal(msg)
 
-	senderKey := "history:" + msg.SenderID.String()
-	receiverKey := "history:" + msg.ReceiverID.String()
+	senderKey := repository.HistoryKey(msg.SenderID.String())
+	receiverKey := repository.HistoryKey(msg.ReceiverID.String())
 	
 	_ = l.Broker.CacheMessage(ctx, senderKey, updatedMsgBytes)
 	_ = l.Broker.CacheMessage(ctx, receiverKey, updatedMsgBytes)
@@ -56,7 +56,7 @@ import (
 	// GetHistory:
 	func (l *ChatLogic) GetHistory(userID uuid.UUID) ([]types.Message, error) {
 	ctx := context.Background()
-	key := "history:" + userID.String()
+	key := repository.HistoryKey(userID.String())
 
 	rawMsgs, err := l.Broker.GetRecentMessages(ctx, key)
 	if err != nil {

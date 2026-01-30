@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"my-project/pkg/consts"
 	"my-project/pkg/logger"
-	"my-project/types" // Import types
+	"my-project/types"
 	"github.com/redis/go-redis/v9"
-	"github.com/sirupsen/logrus"
 )
 
 type WebSocketHub interface {
@@ -17,7 +16,7 @@ type WebSocketHub interface {
 type Subscriber struct {
 	RDB *redis.Client
 	Hub WebSocketHub
-	Log *logrus.Logger
+	Log logger.Logger
 }
 
 func NewSubscriber(rdb *redis.Client, hub WebSocketHub) *Subscriber {

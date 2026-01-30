@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
+	"my-project/pkg/logger"
 	"my-project/internal/port"
-	"my-project/internal/service"
+	"my-project/pkg/utils"
 	"my-project/pkg/consts"
 	"my-project/types"
 )
@@ -27,7 +27,7 @@ type Client struct {
 	Conn   *websocket.Conn
 	Send   chan []byte
 	UserID string
-	Log    *logrus.Logger
+	Log       logger.Logger
 	Sanitizer *service.Sanitizer
 }
 
