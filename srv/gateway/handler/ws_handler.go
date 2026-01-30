@@ -1,48 +1,47 @@
 package handler
 
 import (
-	"net/http"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"my-project/srv/gateway/ws"
 	"my-project/pkg/broker"
-	"my-project/pkg/utils"
 	"my-project/pkg/logger"
+	"my-project/pkg/network" // استفاده از Wrapper شبکه
+	service "my-project/pkg/utils"
+	"my-project/srv/gateway/response" // استفاده از پاسخ استاندارد
+	"my-project/srv/gateway/ws"
 )
 
 type WSHandler struct {
 	Hub       *ws.Hub
-	Broker broker.MessageBroker
+	Broker    broker.MessageBroker
 	Sanitizer *service.Sanitizer
+	Log       logger.Logger // اضافه کردن Logger برای جلوگیری از Setup تکراری
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool { return true },
-}
+// استفاده از Wrapper برای تنظیمات Upgrader
+var upgrader = network.NewUpgrader(1024, 1024)
 
 func (h *WSHandler) HandleConnection(c *gin.Context) {
 	userID := c.GetString("user_id")
 	if userID == "" {
-		c.JSON(401, gin.H{"error": "Unauthorized"})
+		response.Error(c, 401, "Unauthorized")
 		return
 	}
 
+	// استفاده از متد Upgrade داخل Wrapper
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		logger.Setup().Error("Failed to upgrade ws", err)
+		h.Log.Error("Failed to upgrade ws", err)
 		return
 	}
 
 	client := &ws.Client{
 		Hub:       h.Hub,
-		Broker:     h.Broker,
-		Conn:      conn,
+		Broker:    h.Broker,
+		Conn:      conn, // تایپ این الان network.SocketConnection است
 		Send:      make(chan []byte, 256),
 		UserID:    userID,
-		Log:       logger.Setup(), 
-		Sanitizer: h.Sanitizer, 
+		Log:       h.Log, // استفاده از لاگر تزریق شده
+		Sanitizer: h.Sanitizer,
 	}
 
 	client.Hub.Register <- client

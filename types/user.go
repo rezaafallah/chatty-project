@@ -1,9 +1,9 @@
 package types
 
-import "github.com/google/uuid"
+import "my-project/pkg/uid"
 
 type User struct {
-	ID           uuid.UUID `json:"id"`
+	ID           uid.ID    `json:"id"`
 	Username     string    `json:"username"`
 	PasswordHash string    `json:"-"`
 	MnemonicHash string    `json:"-"`

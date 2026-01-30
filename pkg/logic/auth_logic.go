@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
+	"my-project/pkg/uid"
 	"my-project/internal/auth"
 	"my-project/pkg/consts"
 	"my-project/pkg/repository"
@@ -34,7 +34,7 @@ func (a *AuthLogic) Register(ctx context.Context, req types.RegisterReq) (string
 	pubKey, _ := crypto.GenerateKeyPair(mnemonic)
 
 	user := types.User{
-		ID:           uuid.New(),
+		ID:           uid.New(),
 		Username:     req.Username,
 		PasswordHash: crypto.HashString(req.Password),
 		MnemonicHash: crypto.HashString(mnemonic),

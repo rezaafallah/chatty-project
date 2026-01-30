@@ -1,11 +1,11 @@
 package types
 
-import "github.com/google/uuid"
+import "my-project/pkg/uid"
 
 type Message struct {
-	ID         uuid.UUID `json:"id"`
-	SenderID   uuid.UUID `json:"sender_id"`
-	ReceiverID uuid.UUID `json:"receiver_id"`
-	Content    string    `json:"content"` // Encrypted Base64
-	CreatedAt  int64     `json:"created_at"`
+	ID         uid.ID `json:"id"`
+	SenderID   uid.ID `json:"sender_id"`
+	ReceiverID uid.ID `json:"receiver_id"`
+	Content    string `json:"content"`
+	CreatedAt  int64  `json:"created_at"`
 }

@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
-	"my-project/pkg/logger"
 	"my-project/pkg/broker"
-	"my-project/pkg/utils"
 	"my-project/pkg/consts"
+	"my-project/pkg/logger"
+	"my-project/pkg/network"
+	"my-project/pkg/uid"  
+	"my-project/pkg/utils"
 	"my-project/types"
 )
 
@@ -22,11 +22,11 @@ const (
 )
 
 type Client struct {
-	Hub    *Hub
-	Broker broker.MessageBroker
-	Conn   *websocket.Conn
-	Send   chan []byte
-	UserID string
+	Hub       *Hub
+	Broker    broker.MessageBroker
+	Conn      network.SocketConnection
+	Send      chan []byte
+	UserID    string
 	Log       logger.Logger
 	Sanitizer *service.Sanitizer
 }
@@ -49,7 +49,7 @@ func (c *Client) ReadPump() {
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if network.IsUnexpectedCloseError(err, network.CloseGoingAway, network.CloseAbnormalClosure) {
 				c.Log.WithError(err).Error("WS Read Error")
 			}
 			break
@@ -60,22 +60,20 @@ func (c *Client) ReadPump() {
 			c.Log.Error("Invalid JSON format from client")
 			continue
 		}
-			req.Content = c.Sanitizer.Clean(req.Content)
-
-		senderUUID, err := uuid.Parse(c.UserID)
+		req.Content = c.Sanitizer.Clean(req.Content)
+		senderUUID, err := uid.Parse(c.UserID)
 		if err != nil {
 			c.Log.Error("Invalid Sender UUID")
 			break
 		}
-		
-		receiverUUID, err := uuid.Parse(req.ReceiverID)
+
+		receiverUUID, err := uid.Parse(req.ReceiverID)
 		if err != nil {
 			c.Log.Errorf("Invalid Receiver UUID: %s", req.ReceiverID)
 			continue
 		}
 
 		domainMsg := types.Message{
-			// ID:         uuid.New(), core
 			SenderID:   senderUUID,
 			ReceiverID: receiverUUID,
 			Content:    req.Content,
@@ -85,7 +83,7 @@ func (c *Client) ReadPump() {
 		bytes, err := json.Marshal(domainMsg)
 		if err != nil {
 			c.Log.WithError(err).Error("Failed to marshal domain message")
-			continue // no progress bad messages
+			continue
 		}
 
 		err = c.Broker.PushQueue(context.Background(), consts.QueueChatInbound, bytes)
@@ -107,11 +105,11 @@ func (c *Client) WritePump() {
 		case message, ok := <-c.Send:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.Conn.WriteMessage(network.CloseMessage, []byte{})
 				return
 			}
 
-			w, err := c.Conn.NextWriter(websocket.TextMessage)
+			w, err := c.Conn.NextWriter(network.TextMessage)
 			if err != nil {
 				return
 			}
@@ -123,7 +121,7 @@ func (c *Client) WritePump() {
 
 		case <-ticker.C:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err := c.Conn.WriteMessage(network.PingMessage, nil); err != nil {
 				return
 			}
 		}

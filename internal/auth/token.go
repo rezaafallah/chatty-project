@@ -3,7 +3,7 @@ package auth
 import (
 	"time"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
+	"my-project/pkg/uid"
 )
 
 // JWTManager responsible for generating tokens
@@ -20,7 +20,7 @@ func NewJWTManager(secret string, expiry time.Duration) *JWTManager {
 }
 
 // Generate creates a signed JWT token
-func (m *JWTManager) Generate(userID uuid.UUID) (string, error) {
+func (m *JWTManager) Generate(userID uid.ID) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": userID.String(),
 		"exp": time.Now().Add(m.Expiry).Unix(),

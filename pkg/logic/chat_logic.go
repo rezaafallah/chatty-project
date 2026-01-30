@@ -7,7 +7,7 @@ import (
 	"my-project/pkg/repository"
 	"my-project/types"
 	"errors"
-	"github.com/google/uuid"
+	"my-project/pkg/uid"
 	"my-project/pkg/logger"
 	"my-project/pkg/consts"
 )
@@ -37,8 +37,8 @@ import (
 		return errors.New(consts.ErrEmptyContent)
 	}
 
-	if msg.ID == uuid.Nil {
-		msg.ID = uuid.New()
+	if msg.ID == uid.Nil {
+		msg.ID = uid.New()
 	}
 
 	err := l.Repo.Save(ctx, msg)
@@ -65,7 +65,7 @@ import (
 }
 
 	// GetHistory:
-	func (l *ChatLogic) GetHistory(userID uuid.UUID) ([]types.Message, error) {
+	func (l *ChatLogic) GetHistory(userID uid.ID) ([]types.Message, error) {
 	ctx := context.Background()
 	key := repository.HistoryKey(userID.String())
 
