@@ -5,14 +5,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"my-project/srv/gateway/ws"
-	"my-project/internal/port"
+	"my-project/pkg/broker"
 	"my-project/pkg/utils"
 	"my-project/pkg/logger"
 )
 
 type WSHandler struct {
 	Hub       *ws.Hub
-	Broker port.MessageBroker
+	Broker broker.MessageBroker
 	Sanitizer *service.Sanitizer
 }
 

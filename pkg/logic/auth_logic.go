@@ -6,19 +6,18 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"my-project/pkg/utils/crypto"
+	"my-project/internal/auth"
 	"my-project/pkg/repository"
-	"my-project/pkg/auth"
+	"my-project/pkg/utils/crypto"
 	"my-project/types"
 )
 
 type AuthLogic struct {
 	Repo      repository.UserRepository
-	TokenMgr  auth.TokenManager
+	TokenMgr  *auth.JWTManager
 }
 
-// (Dependency Injection)
-func NewAuthLogic(repo repository.UserRepository, tokenMgr auth.TokenManager) *AuthLogic {
+func NewAuthLogic(repo repository.UserRepository, tokenMgr *auth.JWTManager) *AuthLogic {
 	return &AuthLogic{
 		Repo:     repo,
 		TokenMgr: tokenMgr,

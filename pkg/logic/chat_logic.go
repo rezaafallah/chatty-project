@@ -3,7 +3,7 @@ package logic
 import (
 	"context"
 	"encoding/json"
-	"my-project/internal/port"
+	"my-project/pkg/broker"
 	"my-project/pkg/repository"
 	"my-project/types"
 	"errors"
@@ -12,10 +12,10 @@ import (
 
 	type ChatLogic struct {
 		Repo   repository.MessageRepository
-		Broker port.MessageBroker
+		Broker broker.MessageBroker
 	}
 
-	func NewChatLogic(repo repository.MessageRepository, broker port.MessageBroker) *ChatLogic {
+	func NewChatLogic(repo repository.MessageRepository, broker broker.MessageBroker) *ChatLogic {
 		return &ChatLogic{Repo: repo, Broker: broker}
 	}
 

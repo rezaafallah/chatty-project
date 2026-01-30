@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 	"my-project/pkg/logger"
-	"my-project/internal/port"
+	"my-project/pkg/broker"
 )
 
 type Hub struct {
@@ -13,10 +13,10 @@ type Hub struct {
 	Unregister chan *Client
 	Mutex      sync.RWMutex
 	Log        logger.Logger
-	Broker     port.MessageBroker
+	Broker     broker.MessageBroker
 }
 
-func NewHub(broker port.MessageBroker) *Hub {
+func NewHub(broker broker.MessageBroker) *Hub {
 	return &Hub{
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),

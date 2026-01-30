@@ -6,10 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type TokenManager interface {
-	Generate(userID uuid.UUID) (string, error)
-}
-
+// JWTManager responsible for generating tokens
 type JWTManager struct {
 	SecretKey string
 	Expiry    time.Duration
@@ -22,6 +19,7 @@ func NewJWTManager(secret string, expiry time.Duration) *JWTManager {
 	}
 }
 
+// Generate creates a signed JWT token
 func (m *JWTManager) Generate(userID uuid.UUID) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": userID.String(),

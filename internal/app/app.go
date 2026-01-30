@@ -16,7 +16,7 @@ import (
 	"my-project/pkg/logic"
 	"my-project/pkg/repository"
 	"my-project/pkg/utils"
-	"my-project/pkg/auth"
+	"my-project/internal/auth"
 	"my-project/srv/gateway"
 	"my-project/srv/gateway/handler"
 	"my-project/srv/gateway/worker"

@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"my-project/pkg/logger"
-	"my-project/internal/port"
+	"my-project/pkg/broker"
 	"my-project/pkg/utils"
 	"my-project/pkg/consts"
 	"my-project/types"
@@ -23,7 +23,7 @@ const (
 
 type Client struct {
 	Hub    *Hub
-	Broker port.MessageBroker
+	Broker broker.MessageBroker
 	Conn   *websocket.Conn
 	Send   chan []byte
 	UserID string
