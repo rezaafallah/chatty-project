@@ -14,6 +14,7 @@ import (
 	"my-project/pkg/consts"
 	"my-project/pkg/logic"
 	"my-project/pkg/repository"
+	"my-project/pkg/logger"
 )
 
 type WorkerApp struct {
@@ -30,7 +31,7 @@ func NewWorkerApp(cfg *config.Config) (*WorkerApp, error) {
 
 	rdb := redis.New(cfg.RedisAddr)
 	msgRepo := repository.NewMessageRepository(db.Conn)
-	chatLogic := logic.NewChatLogic(msgRepo, rdb)
+	chatLogic := logic.NewChatLogic(msgRepo, rdb, logger.Setup())
 
 	return &WorkerApp{
 		DB:        db,

@@ -82,7 +82,11 @@ func (c *Client) ReadPump() {
 			CreatedAt:  time.Now().Unix(),
 		}
 
-		bytes, _ := json.Marshal(domainMsg)
+		bytes, err := json.Marshal(domainMsg)
+		if err != nil {
+			c.Log.WithError(err).Error("Failed to marshal domain message")
+			continue // no progress bad messages
+		}
 
 		err = c.Broker.PushQueue(context.Background(), consts.QueueChatInbound, bytes)
 		if err != nil {

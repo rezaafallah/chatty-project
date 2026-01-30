@@ -68,8 +68,10 @@ func (h *Hub) BroadcastToUser(userID string, message []byte) {
 		select {
 		case client.Send <- message:
 		default:
-			close(client.Send)
-			delete(h.Clients, userID)
+			select {
+			case h.Unregister <- client:
+			default:
+			}
 		}
 	}
 }

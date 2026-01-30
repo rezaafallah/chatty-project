@@ -9,7 +9,10 @@ const (
 	QueueChatInbound   = "chat.inbound"
 
 	// Error Messages
-	ErrInternalServer = "internal server error"
-	ErrInvalidInput   = "invalid input parameters"
-	ErrUnauthorized   = "unauthorized access"
+	ErrInternalServer     = "internal server error"
+	ErrInvalidInput       = "invalid input parameters"
+	ErrUnauthorized       = "unauthorized access"
+	ErrEmptyContent       = "message content cannot be empty"
+	ErrInvalidCredentials = "invalid credentials"
+	ErrInvalidMnemonic    = "invalid mnemonic"
 )

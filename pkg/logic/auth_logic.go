@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"my-project/internal/auth"
+	"my-project/pkg/consts"
 	"my-project/pkg/repository"
 	"my-project/pkg/utils/crypto"
 	"my-project/pkg/validator"
@@ -51,7 +52,7 @@ func (a *AuthLogic) Login(ctx context.Context, username, password string) (strin
 		return "", err
 	}
 	if user == nil || crypto.HashString(password) != user.PasswordHash {
-		return "", errors.New("invalid credentials")
+		return "", errors.New(consts.ErrInvalidCredentials)
 	}
 
 	return a.TokenMgr.Generate(user.ID)
@@ -65,7 +66,7 @@ func (a *AuthLogic) RecoverAccount(ctx context.Context, mnemonic string) (string
 		return "", err
 	}
 	if user == nil {
-		return "", errors.New("invalid mnemonic")
+		return "", errors.New(consts.ErrInvalidMnemonic)
 	}
 
 	return a.TokenMgr.Generate(user.ID)

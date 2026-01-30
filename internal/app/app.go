@@ -22,6 +22,7 @@ import (
 	"my-project/srv/gateway/handler"
 	"my-project/srv/gateway/worker"
 	"my-project/srv/gateway/ws"
+	"my-project/pkg/logger"
 )
 
 // Application
@@ -51,7 +52,7 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 
 	// 3. Logic (Services)
 	authLogic := logic.NewAuthLogic(userRepo, tokenMgr)
-	chatLogic := logic.NewChatLogic(msgRepo, rdb)
+	chatLogic := logic.NewChatLogic(msgRepo, rdb, logger.Setup())
 
 	// 4. WebSocket Hub & Workers
 	hub := ws.NewHub(rdb)
