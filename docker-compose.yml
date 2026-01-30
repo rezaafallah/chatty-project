@@ -58,7 +58,7 @@ services:
       - APP_ENV=production
       - DB_DSN=postgres://user:password@db:5432/chatty_db?sslmode=disable
       - REDIS_ADDR=redis:6379
-      - JWT_SECRET=super_secret_jwt_key_change_me
+      - JWT_SECRET=mysupersecretkey123
     #Logging Driver 
     logging: &loki-logging
       driver: loki
@@ -84,6 +84,8 @@ services:
       - APP_ENV=production
       - DB_DSN=postgres://user:password@db:5432/chatty_db?sslmode=disable
       - REDIS_ADDR=redis:6379
+      - JWT_SECRET=mysupersecretkey123
+      - JWT_EXPIRY=72h
     logging: *loki-logging
 
 volumes:

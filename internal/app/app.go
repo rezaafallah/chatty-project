@@ -13,16 +13,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"my-project/internal/adapter/postgres"
 	"my-project/internal/adapter/redis"
-	"my-project/pkg/logic"
-	"my-project/pkg/repository"
-	"my-project/pkg/utils"
 	"my-project/internal/auth"
 	"my-project/pkg/config"
+	"my-project/pkg/logger"
+	"my-project/pkg/logic"
+	"my-project/pkg/repository"
+	service "my-project/pkg/utils"
 	"my-project/srv/gateway"
 	"my-project/srv/gateway/handler"
 	"my-project/srv/gateway/worker"
 	"my-project/srv/gateway/ws"
-	"my-project/pkg/logger"
 )
 
 // Application
@@ -63,11 +63,14 @@ func NewApplication(cfg *config.Config) (*Application, error) {
 
 	// 5. Handlers
 	authHandler := &handler.AuthHandler{Logic: authLogic}
+	
 	wsHandler := &handler.WSHandler{
 		Hub:       hub,
 		Broker:    rdb,
 		Sanitizer: sanitizer,
+		Log:       logger.Setup(),
 	}
+	
 	chatHandler := &handler.ChatHandler{Logic: chatLogic}
 
 	// 6. Router

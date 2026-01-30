@@ -9,8 +9,8 @@ import (
 	"my-project/pkg/consts"
 	"my-project/pkg/logger"
 	"my-project/pkg/network"
-	"my-project/pkg/uid"  
-	"my-project/pkg/utils"
+	"my-project/pkg/uid"
+	service "my-project/pkg/utils"
 	"my-project/types"
 )
 
@@ -31,9 +31,21 @@ type Client struct {
 	Sanitizer *service.Sanitizer
 }
 
-type IncomingReq struct {
+type WSEvent struct {
+	Type    string          `json:"type"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+// new msg
+type SendMessagePayload struct {
 	ReceiverID string `json:"to"`
 	Content    string `json:"content"`
+}
+
+// edit msg
+type EditMessagePayload struct {
+	MessageID string `json:"message_id"`
+	Content   string `json:"content"`
 }
 
 func (c *Client) ReadPump() {
@@ -55,41 +67,76 @@ func (c *Client) ReadPump() {
 			break
 		}
 
-		var req IncomingReq
-		if err := json.Unmarshal(message, &req); err != nil {
-			c.Log.Error("Invalid JSON format from client")
-			continue
-		}
-		req.Content = c.Sanitizer.Clean(req.Content)
-		senderUUID, err := uid.Parse(c.UserID)
-		if err != nil {
-			c.Log.Error("Invalid Sender UUID")
-			break
-		}
-
-		receiverUUID, err := uid.Parse(req.ReceiverID)
-		if err != nil {
-			c.Log.Errorf("Invalid Receiver UUID: %s", req.ReceiverID)
+		// 1. (Envelope)
+		var event WSEvent
+		if err := json.Unmarshal(message, &event); err != nil {
+			c.Log.Error("Invalid JSON event format")
 			continue
 		}
 
-		domainMsg := types.Message{
-			SenderID:   senderUUID,
-			ReceiverID: receiverUUID,
-			Content:    req.Content,
-			CreatedAt:  time.Now().Unix(),
-		}
+		// 2.(Dispatching)
+		switch event.Type {
+		case consts.EventMessageNew:
+			c.handleNewMessage(event.Payload)
+		
+		case consts.EventMessageEdit:
+			// TODO: Implement Edit Logic
+			c.Log.Info("Edit message request received (Not implemented yet)")
+			
+		case consts.EventMessageDelete:
+			// TODO: Implement Delete Logic
+			c.Log.Info("Delete message request received (Not implemented yet)")
 
-		bytes, err := json.Marshal(domainMsg)
-		if err != nil {
-			c.Log.WithError(err).Error("Failed to marshal domain message")
-			continue
+		default:
+			c.Log.Warn("Unknown event type:", event.Type)
 		}
+	}
+}
 
-		err = c.Broker.PushQueue(context.Background(), consts.QueueChatInbound, bytes)
-		if err != nil {
-			c.Log.Error("Failed to push to Broker queue", err)
-		}
+func (c *Client) handleNewMessage(payload json.RawMessage) {
+	var req SendMessagePayload
+	if err := json.Unmarshal(payload, &req); err != nil {
+		c.Log.Error("Invalid payload for message.new")
+		return
+	}
+
+	// Sanitize
+	req.Content = c.Sanitizer.Clean(req.Content)
+	if req.Content == "" {
+		return
+	}
+
+	// Validations
+	senderUUID, err := uid.Parse(c.UserID)
+	if err != nil {
+		c.Log.Error("Invalid Sender UUID")
+		return
+	}
+
+	receiverUUID, err := uid.Parse(req.ReceiverID)
+	if err != nil {
+		c.Log.Errorf("Invalid Receiver UUID: %s", req.ReceiverID)
+		return
+	}
+
+	// Create Domain Message
+	domainMsg := types.Message{
+		SenderID:   senderUUID,
+		ReceiverID: receiverUUID,
+		Content:    req.Content,
+		CreatedAt:  time.Now().Unix(),
+	}
+
+	// Marshal & Push to Redis
+	bytes, err := json.Marshal(domainMsg)
+	if err != nil {
+		c.Log.WithError(err).Error("Failed to marshal domain message")
+		return
+	}
+
+	err = c.Broker.PushQueue(context.Background(), consts.QueueChatInbound, bytes)
+	if err != nil {
+		c.Log.Error("Failed to push to Broker queue", err)
 	}
 }
 
