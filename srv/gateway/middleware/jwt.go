@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"my-project/pkg/api"
+	"my-project/srv/gateway/response"
 	"strings"
 )
 
@@ -15,7 +15,7 @@ func Auth(secret string) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			api.Error(c, 401, "Unauthorized")
+			response.Error(c, 401, "Unauthorized")
 			c.Abort()
 			return
 		}

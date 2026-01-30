@@ -2,7 +2,7 @@ package handler
 
 import (
 	"my-project/pkg/logic"
-	"my-project/pkg/api"
+	"my-project/srv/gateway/response"
 	"my-project/srv/gateway/dto"
 	"my-project/types"
 	"github.com/gin-gonic/gin"
@@ -16,7 +16,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	// 1. Bind to DTO
 	var req dto.RegisterReq 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		api.Error(c, 400, err.Error())
+		response.Error(c, 400, err.Error())
 		return
 	}
 
@@ -28,26 +28,26 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	mnemonic, err := h.Logic.Register(c.Request.Context(), domainReq)
 	if err != nil {
-		api.Error(c, 500, "Registration failed")
+		response.Error(c, 500, "Registration failed")
 		return
 	}
-	api.Success(c, gin.H{"mnemonic": mnemonic})
+	response.Success(c, gin.H{"mnemonic": mnemonic})
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req dto.LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		api.Error(c, 400, "Invalid request body")
+		response.Error(c, 400, "Invalid request body")
 		return
 	}
 
 	token, err := h.Logic.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
-		api.Error(c, 401, "Login failed: "+err.Error())
+		response.Error(c, 401, "Login failed: "+err.Error())
 		return
 	}
 
-	api.Success(c, dto.LoginRes{
+	response.Success(c, dto.LoginRes{
 		Token:     token,
 		ExpiresIn: 72 * 3600,
 	})
@@ -56,17 +56,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) RecoverAccount(c *gin.Context) {
 	var req dto.RecoverReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		api.Error(c, 400, "Invalid mnemonic format")
+		response.Error(c, 400, "Invalid mnemonic format")
 		return
 	}
 
 	token, err := h.Logic.RecoverAccount(c.Request.Context(), req.Mnemonic)
 	if err != nil {
-		api.Error(c, 401, "Recovery failed: invalid mnemonic")
+		response.Error(c, 401, "Recovery failed: invalid mnemonic")
 		return
 	}
 
-	api.Success(c, dto.LoginRes{
+	response.Success(c, dto.LoginRes{
 		Token:     token,
 		ExpiresIn: 72 * 3600,
 	})

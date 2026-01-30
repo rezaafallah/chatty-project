@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"my-project/pkg/logic"
-	"my-project/pkg/api"
+	"my-project/srv/gateway/response"
 )
 
 type ChatHandler struct {
@@ -16,15 +16,15 @@ func (h *ChatHandler) GetHistory(c *gin.Context) {
 	userIDStr := c.GetString("user_id")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		api.Error(c, 401, "Invalid User ID")
+		response.Error(c, 401, "Invalid User ID")
 		return
 	}
 
 	msgs, err := h.Logic.GetHistory(userID)
 	if err != nil {
-		api.Error(c, 500, "Failed to fetch history")
+		response.Error(c, 500, "Failed to fetch history")
 		return
 	}
 
-	api.Success(c, msgs)
+	response.Success(c, msgs)
 }
